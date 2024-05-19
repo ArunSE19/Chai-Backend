@@ -1,0 +1,12 @@
+{
+  "name": "setting_up_backend",
+  "version": "1.0.0",
+  "description": "Learning with hitesh sir",
+  "main": "index.js",
+  "type":"module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hitesh Chaudry",
+  "license": "ISC"
+}
