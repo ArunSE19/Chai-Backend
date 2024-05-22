@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+import { JsonWebToken } from "jsonwebtoken";
 
 const userSchema=new mongoose.Schema(
 {
@@ -42,4 +44,41 @@ const userSchema=new mongoose.Schema(
 },
 {timestamp:true})
 
+userSchema.pre("save",async function(){
+    if(!this.isModified("password")) return next();
+    this.password=bcrypt.hash(this.password,10)
+    next()
+})//not using arrow function because arrow function don't have this reference
+
+userSchema.methods.isPasswordCorrect=async function(password){
+    return await bcrypt.compare(password,this.password)
+}
+
+
+userSchema.methods.generateACCESSTOKEN=function(){
+    return JsonWebToken.sign({
+            _id:this._id,
+            email:this.email,
+            fullname:this.fullname,
+            username:this.username
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+        expiresIn:process.env.ACCESS_TOKEN_EXPIRY
+    }
+)
+
+}
+userSchema.methods.generateREFRESHTOKEN=function(){
+    return JsonWebToken.sign({
+        _id:this._id,
+       
+},
+process.env.REFRESH_TOKEN_SECRET,
+{
+    expiresIn:process.env.REFRESH_TOKEN_EXPIRY
+}
+)
+
+}
 export const User=mongoose.model("User",userSchema)
