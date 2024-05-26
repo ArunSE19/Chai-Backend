@@ -54,7 +54,7 @@ userSchema.methods.isPasswordCorrect=async function(password){
     return await bcrypt.compare(password,this.password)
 }
 
-
+//Access token is not stored in db while refresh token, why and how will be discussed later
 userSchema.methods.generateACCESSTOKEN=function(){
     return JsonWebToken.sign({
             _id:this._id,
