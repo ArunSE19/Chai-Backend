@@ -55,7 +55,7 @@ userSchema.methods.isPasswordCorrect=async function(password){
 }
 
 //Access token is not stored in db while refresh token, why and how will be discussed later
-userSchema.methods.generateACCESSTOKEN=function(){
+userSchema.methods.generateAccessToken=function(){
     return jwt.sign({
             _id:this._id,
             email:this.email,
@@ -69,7 +69,7 @@ userSchema.methods.generateACCESSTOKEN=function(){
 )
 
 }
-userSchema.methods.generateREFRESHTOKEN=function(){
+userSchema.methods.generateRefreshToken=function(){
     return jwt.sign({
         _id:this._id,
        
