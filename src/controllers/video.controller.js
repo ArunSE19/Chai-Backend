@@ -2,7 +2,7 @@ import mongoose, { isValidObjectId } from "mongoose"
 import {APIError} from "../utils/ApiError.js"
 import {APIResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {deleteFromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 import { Video } from "../models/video.models.js"
 import { User } from "../models/user.models.js"
 
@@ -194,7 +194,7 @@ const getVideoById = asyncHandler(async (req, res) => {
             return new APIError(404,"Video Doesnot Exist")
         }
     console.log(videoObject)
-    await Video.findByIdAndDelete(
+    await Video.findByIdAndUpdate(
         videoId,
         {
             $inc:{
@@ -223,6 +223,61 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
+    if(!isValidObjectId(videoId))
+        {
+            return new APIError(400,"Invalid Video ID")
+        }
+
+    const currentVideo=await Video.findById(videoId)
+    if(currentVideo?.owner.toString()!= req.user?._id)
+        {
+            console.log(currentVideo.owner)
+            console.log(req.user?._id)
+            throw new APIError(400,"You are not the owner of the video, you cannot update the video")
+        }
+
+    const {title,description}=req.body
+    const thumbnailLocalPath=req.files?.thumbnail[0].path
+        console.log(thumbnailLocalPath)
+
+    if(!title && !description && !thumbnailLocalPath)
+        {
+            throw new APIError(400, "Atleast one field required to update")
+        }
+    
+    if(thumbnailLocalPath)
+        {
+            let oldVideo=currentVideo.thumbnail.url
+            let videoUpload=await uploadOnCloudinary(thumbnailLocalPath)
+            if(!videoUpload)
+                {
+                    throw new APIError(400, "Error While uploading file on cloudinary")
+                }
+            await deleteFromCloudinary(oldVideo)
+        }
+        else
+        {
+         //   thumbnailLocalPath=currentVideo.thumbnail.url
+        }
+    
+    
+    const videoupdate=await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set:{
+                title,
+                description,
+                thumbnail:thumbnailLocalPath.url
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+    return res
+    .status(200)
+    .json(200,"Video Updated Successfully",videoupdate)
 
 })
 
