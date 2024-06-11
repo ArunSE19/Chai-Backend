@@ -10,6 +10,10 @@ import { User } from "../models/user.models.js"
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+
+
+
+
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -284,10 +288,75 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
+
+    if(!isValidObjectId(videoId))
+        {
+            throw new APIError(400,"Invalid video ID")
+        }
+    
+    const ownerVideo=await Video.findById(videoId)
+
+            if(!ownerVideo)
+                {
+                    throw new APIError(401,"No such Video Found")
+                }
+            else if(ownerVideo.owner.toString() != req.user?._id)
+                {
+                    throw new APIError(401,"You don't have right to delete the video")
+                }
+    const deleteVideo=await deleteFromCloudinary(ownerVideo.videoFile.url,"video")
+    const delteThumbnail=await deleteFromCloudinary(ownerVideo.thumbnail.url)
+    if(!deleteVideo || !delteThumbnail)
+        {
+            throw new APIError(402,"Error while deleting video from cloudinary")
+        }
+    const videoDeleteFromDB=await Video.findByIdAndDelete(videoId)
+
+
+    if(!videoDeleteFromDB)
+        {
+            throw new APIError(403,"Error while deleting file from DB")
+        }
+    
+    return res
+    .status(200)
+    .json(200,"Video Deleted Successfully",videoDeleteFromDB)
+        
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    if(!videoId)
+        {
+            throw new APIError(400,"Invalid Video ID")
+        }
+    
+    const videoCheck=await Video.findById(videoId)
+    if(!videoCheck)
+        {
+            return new APIError(401,"Unable to Find Video")
+        }
+
+    if(videoCheck.owner.toString()!=req?.user._id)
+        {
+            throw new APIError(400,"You are not authorised to change toggle status")
+        }
+    
+    const updateVideoStatus=await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set:{
+                isPublished:!videoCheck?.isPublished
+            }
+        },
+        {
+            new:true
+        }
+    )
+    return res
+    .status(200)
+    .json(new APIResponse(200,"Video publish status updated",{isPublished:updateVideoStatus.isPublished}))
 })
 
 export {
@@ -298,3 +367,5 @@ export {
     deleteVideo,
     togglePublishStatus
 }
+
+
