@@ -161,23 +161,130 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const {playlistId, videoId} = req.params
+
+    if(!isValidObjectId(playListById) || !isValidObjectId(videoId))
+        {
+            throw new APIError(401,"Invalid playlist or videoID")
+        }
+    const findVideo=await Video.findById(videoId)
+    if(!findVideo)
+        {
+            throw new APIError(401,"No Such Video Available")
+        }
+    const addVideo=await Playlist.findByIdAndUpdate(
+        playlistId,
+        {
+            $addToSet:{
+                $videos:videoId
+            }     
+        },
+        {
+            new:true
+        }
+    )
+    if(!addVideo)
+        {
+            throw new APIError(402,"Either no such video available or playlist")
+        }
+    
+    return res
+    .status(200)
+    .json(new APIResponse(200,addVideo,"Video Added Successfully"))    
 })
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     const {playlistId, videoId} = req.params
     // TODO: remove video from playlist
+    if(!isValidObjectId(playlistId) || !isValidObjectId(!videoId))
+        {
+            throw new APIError(402,"Invalid video or playlist ID")
+        }
+    const findVideo=await Video.findById(videoId)
+    if(!findVideo)
+        {
+            throw new APIError(401,"No such Video Available")
+        }
+    const removeVideo=await Playlist.findByIdAndUpdate(
+        playlistId,
+        {
+            $pull:{
+                videos:videoId
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+    if(!removeVideo)
+        {
+            throw new APIError(401,"Error while removing video from Playlist")
+        }
+    
+    return res
+    .status(200,removeVideo,"Video Removed Successfully")
+    
+    
 
 })
 
 const deletePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     // TODO: delete playlist
+    if(!isValidObjectId(playlistId))
+        {
+            throw new APIError(400,"Invalid Object ID:Delete Playlist")
+        }
+    
+        const findPlaylist=await Playlist.findByIdAndDelete(
+            playlistId
+        )
+
+        if(!findPlaylist)
+            {
+                throw new APIError(401,findPlaylist,"Either playlist not found or error while deleteing playlist")
+            }
+        
+        return res
+        .status(200)
+        .json(200,findPlaylist,"Playlist deleted Successfully")
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     const {name, description} = req.body
     //TODO: update playlist
+
+    if(!isValidObjectId(playlistId))
+        {
+            throw new APIError(400,"Invalid Playlist ID")
+        }
+    if(!name || !description)
+        {
+            throw new APIError(401,"Both name and Description required")
+        }
+
+    const updatePlaylist=await Playlist.findByIdAndUpdate(
+        playlistId,
+        {
+            $set:{
+                name,
+                description
+            }
+        },
+        {
+            new:true
+        }
+    )
+    if(!updatePlaylist)
+        {
+            throw new APIError(402,"Error while updating playlist")
+        }
+    
+    return res
+    .status(200)
+    .json(200,updatePlaylist,"Playlist Updated Successfully")
+    
 })
 
 export {
