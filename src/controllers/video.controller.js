@@ -10,10 +10,64 @@ import { User } from "../models/user.models.js"
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+    const Page = parseInt(page);
+    const Limit = parseInt(limit);
 
+    const result = await Video.aggregate([
+        {
+            $match: {
+                isPublished: true
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerOfVideo",
+                pipeline: [{
+                    $project: {
+                        fullname: 1,
+                        username: 1,
+                        avatar: 1
+                    }
+                }]
+            },
+        },
+        {
+            $addFields: {
+                ownerOfVideo: { $first: "$ownerOfVideo" },
+            }
+        },
+        {
+            $facet: {
+                videos: [
+                    { $skip: (Page - 1) * Limit },
+                    { $limit: Limit },
+                    {
+                        $sort: { [sortBy]: sortType === "asc" ? 1 : -1 }
+                    }
+                ],
+                totalVideos: [
+                    { $count: "count" }
+                ]
+            }
+        },
+    ]).option({ maxTimeMS: 60000})
 
+    try {
+        const videos = result[0].videos;
+        const videosOnPage = videos.length
+        const totalVideos = result[0].totalVideos[0]?.count || 0;
 
-
+        if (videos.length === 0) {
+            return res.status(200).json(new ApiResponse(200, {}, "No videos to show"));
+        } else {
+            return res.status(200).json(new ApiResponse(200, { videos, videosOnPage, totalVideos }, "Videos list fetched successfully"));
+        }
+    } catch (error) {
+        throw new ApiError(400, error.message || "Something went wrong");
+    }
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
